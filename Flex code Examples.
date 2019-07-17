@@ -1,0 +1,96 @@
+// Lexical analyser for detecting letters and counting the letters.
+// code declarations
+%{
+int count=0;
+%}
+// definitions of regular expressions 
+// For example: To find the given letter is capital or not.
+%%
+[A-Z] {printf("%s capital letter\n",yytext);
+	count++;}
+[a-z] {printf("%s small letter\n",yytext);
+	count++;}
+. {printf("%s not a letter\n",yytext);}
+"quit" return 0;
+%%
+// Reason for yywrap():- Function yywrap is called by lex when input is exhausted. Return 1 if you are done or 0 if more processing is required. Every C program requires a main function. In this case we simply call yylex that is the main entry-point for lex.
+int yywrap(){return 0;}
+// Reason for yylex():- Implies the main entry point for lex, reads the input stream generates tokens, returns zero at the end of input stream . 
+int main()
+{
+yylex();
+printf("letters: %d\n",count);
+getch();
+return 0;
+}
+
+
+// Counting letters.
+
+%{
+#include<stdio.h>
+int Upper=0;
+int Lower=0;
+%}
+
+%%
+[A-Z] {printf("Uppercase\t");Upper++;}
+[a-z] {printf("Lowercase\t");Lower++;}
+%%
+int yywrap()
+{
+return 1;
+}
+main()
+{
+printf("Enter a string");
+yylex();
+
+printf("Uppercase=%d and Lowercase=%d",Upper,Lower);
+}
+
+
+//Checking vowels.
+
+%{
+#include<stdio.h>
+int vowel=0;
+int cons=0;
+%}
+%%
+"a"|"e"|"i"|"o"|"u"|"A"|"E"|"I"|"O"|"U" {printf("is a VOWEL");vowel++;}
+[a-zA-z] {printf("Is a Consonant");cons++;}
+%%
+int yywrap()
+{
+return 1;
+}
+main()
+{
+printf("Enter String\n");
+yylex();
+printf("vowel=%d and Consonent=%d",vowel,cons);
+}
+
+
+// Lex for tockens in C.
+
+%{
+#include<stdio.h>
+%}
+%%
+"auto"|"double"|"int"|"struct"|"break"|"else"|"long"|"switch"|"case"|"enum"|"register"|"typedef"|"char"|"extern"|"return"|"union"|"const"|"float"|"short"|"unsigned"|"continue"|"for"|"signed"|"void"|"default"|"goto"|"sizeof"|"volatile"|"do"|"if"|"static"|"while" {printf("Keyword");}
+[a-zA-Z][a-z|0-9]* {printf("Identifier");}
+[0-9]* {printf("Number");}
+"!"|"@"|"*"|"&"|"^"|"%"|"$"|"#" {printf("Special Character");}
+"="|"+="|"-="|"*="|"/="|"%="|"<<="|"#>>="|"&="|"^="|"|="|"+"|"-"|"*"|"%"|"/" {printf("Assignment Operator");}
+%%
+int yywrap()
+{
+return 1;
+}
+main()
+{
+printf("Enter a string of data\n");
+yylex();
+}
