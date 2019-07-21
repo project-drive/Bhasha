@@ -22,7 +22,7 @@ OPERATOR [+][-][*][/][%][++][--][-=][+=][*=][/=][==][GT][LT][>=][<=][!=][%=][AND
 IDENTIFIER [_a-zA-Z][_a-zA-Z0-9]*
 
 
-KEYWORD		auto|double|int|float|char|String|bool|long|unsigned|signed|void|jabtak|kliye|agar|magar|
+KEYWORD		auto|double|int|float|num|char|String|bool|long|unsigned|signed|void|jabtak|kliye|agar|magar|
 		extern|static|input|output|switch|case|default|jaaree|tod
 %%
 
