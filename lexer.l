@@ -28,6 +28,11 @@ KEYWORD		auto|double|int|float|num|char|String|bool|long|unsigned|signed|void|ja
 NUMBERS		 [0-9]+  
 INTEGERS 	 [-+]?[0-9]*  
 FLOATING_POINT	 [-+]?[0-9]*[.][0-9]+ 
+
+NEW_LINE	(\r\n?|\n)
+WHITE_SPACE	[ ]
+TAB		[\t]
+
 %%
 
 
