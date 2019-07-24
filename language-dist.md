@@ -4,7 +4,7 @@ hindi/ide   -   prabjot, sarvesh
 
 marathi     -   urvi
 
-gujarat     -   devanshi
+gujarati     -   devanshi, meet
 
 punjabi     -  sahej
 
