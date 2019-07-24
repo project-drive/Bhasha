@@ -7,3 +7,5 @@ marathi     -   urvi
 gujarat     -   devanshi
 
 punjabi     -  sahej
+
+bengali     -  harshita
