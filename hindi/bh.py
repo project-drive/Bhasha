@@ -48,6 +48,9 @@ class RTError(Error):
 ### POSITION
 
 class Position:
+    """
+    Class for keeping track of position.
+    """
     def __init__(self, idx, ln, col, fn, ftxt):
         self.idx = idx
         self.ln = ln
@@ -70,6 +73,7 @@ class Position:
 ### TOKENS
 
 TT_INT		= 'INT'
+TT_POW      = 'POW'
 TT_FLOAT    = 'FLOAT'
 TT_PLUS     = 'PLUS'
 TT_MINUS    = 'MINUS'
@@ -80,6 +84,9 @@ TT_RPAREN   = 'RPAREN'
 TT_EOF		= 'EOF'
 
 class Token: #used to create a token, value pair. storing position start and position end of the token.
+    """
+    A token class has token type, token value, start position of the token and end position of the token.
+    """
     def __init__(self, type, value=None, pos_start=None, pos_end=None):
         self.type = type
         self.value = value
@@ -103,6 +110,15 @@ class Token: #used to create a token, value pair. storing position start and pos
 
 
 class Lexer:
+    """
+    class for aiding in lexical analysis. used for generation of token list.
+
+    Methods defined:
+    1. advance: move ahead. character by character.
+    2. make_tokens: generates list of tokens
+    3. make number: special handling function for make_tokens to make number.
+
+    """
     def __init__(self, fn, text):
         self.fn = fn
         self.text = text
@@ -111,13 +127,19 @@ class Lexer:
         self.advance()
 
     def advance(self):
-        self.pos.advance(self.current_char)
+        """
+        advance : moves ahead character by character.
+        """
+        self.pos.advance(self.current_char)# doubt.
         if self.pos.idx < len(self.text):
             self.current_char = self.text[self.pos.idx]
         else:
-            self.current_char = None
+            self.current_char = None #at eof, current char = None.
 
     def make_tokens(self):
+        """
+        make_tokens : generates a list of tokens. Used for token handling.
+        """
         tokens= []
 
         while self.current_char != None: #continue till current character is not none.
@@ -133,6 +155,9 @@ class Lexer:
                 self.advance()
             elif self.current_char == '*':
                 tokens.append(Token(TT_MUL, pos_start= self.pos))
+                self.advance()
+            elif self.current_char == '^':
+                tokens.append(Token(TT_POW, pos_start= self.pos))
                 self.advance()
             elif self.current_char == '/':
                 tokens.append(Token(TT_DIV, pos_start= self.pos))
@@ -152,6 +177,9 @@ class Lexer:
         return tokens, None
 
     def make_number(self): #special handling function for number
+        """
+        special handling function when token number is encountered.
+        """
         num_str = ''
         dot_count = 0
         pos_start = self.pos.copy()
@@ -244,9 +272,12 @@ class Parser:
     Methods :
     1. advance : Increments tok_idx, checks if not out of bounds, updates current token.
     2. parse : used to get the parse result based on the grammar defined in grammar.txt.
-
-
-    left to look : expr() -> parse()
+    3. bin_op : (func() (args func())*) | (func() (args funcb())*)
+    4. power
+    5. atom
+    6. term
+    7. expr
+    8. factor
     """
 
     def __init__(self, tokens):
@@ -269,8 +300,7 @@ class Parser:
     def factor(self):
         """
         factor  : (PLUS|MINUS) factor
-                : INT|FLOAT
-        		: LPAREN expr RPAREN
+                : POW
 
         """
         res = ParseResult()
@@ -283,7 +313,23 @@ class Parser:
                 return res
             return res.success(UnaryOpNode(tok,factor))
 
-        elif tok.type in (TT_INT, TT_FLOAT):
+        return self.power()
+
+    def power(self):
+        """
+        power : atom (pow factor)*
+        """
+        return self.bin_op(self.atom, (TT_POW,), self.factor)
+
+    def atom(self):
+        """
+        atom : INT|FLOAT
+             : LPAREN expr RPAREN
+        """
+        res = ParseResult()
+        tok = self.current_tok
+
+        if tok.type in (TT_INT, TT_FLOAT):
             res.register(self.advance())
             return res.success(NumberNode(tok))
         elif tok.type == TT_LPAREN:
@@ -297,7 +343,7 @@ class Parser:
             else:
                 return res.failure(InvalidSyntaxError(self.current_tok.pos_start,self.current_tok.pos_end,"Expected ')'"))
 
-        return res.failure(InvalidSyntaxError(tok.pos_start, tok.por_end, "Expected Int or Float"))
+        return res.failure(InvalidSyntaxError(tok.pos_start, tok.por_end, "Expected int, float, '+', '-', or '('"))
 
     def term(self):
         """
@@ -311,9 +357,10 @@ class Parser:
         """
         return self.bin_op(self.term,(TT_PLUS,TT_MINUS))
 
-    def bin_op(self,func,args):#generalised function for term and expr.
+    def bin_op(self,func,args,funcb=None):#generalised function for term and expr.
         """
         bin_op    : func (args func)*
+        bin_op    : func (args funcb)*
         """
         res = ParseResult()
         left = res.register(func())
@@ -322,7 +369,10 @@ class Parser:
         while self.current_tok.type in args: #Why while???? to handle : 2 * 3 * 4 + 4, basically what it does is calculates initial 2, combines and looks next again.
             op_tok = self.current_tok
             res.register(self.advance())
-            right = res.register(func())
+            if funcb != None:
+                right = res.register(funcb())
+            else:
+                right = res.register(func())
             if res.error:
                 return res
             left = BinOpNode(left, op_tok, right)
@@ -414,6 +464,15 @@ class Number:
 
             return Number(self.value / other.value).set_context(self.context), None
 
+    def powed_by(self, other):
+        """
+        returns self.value ** other.value
+
+        """
+        if isinstance(other, Number):
+            return Number(self.value ** other.value).set_context(self.context), None
+            pass
+
     def __repr__(self):
         return str(self.value)
 
@@ -471,6 +530,8 @@ class Interpreter:
             result , error = left.multed_by(right)
         elif node.op_tok.type == TT_DIV:
             result , error = left.dived_by(right)
+        elif node.op_tok.type == TT_POW:
+            result , error = left.powed_by(right)
 
         if error:
             return res.failure(error)

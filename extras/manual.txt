@@ -1,0 +1,67 @@
+shell.py
+    shell basically forms the structure of the interpreter
+    shell takes the input from the user
+    prints the output or the error
+
+basic.py
+    contains classes :
+    Token,
+    Lexer,
+    Error,
+    Parser,
+    Interpreter
+    BinaryOpNode,
+    UnaryOpNode,
+    NumberNode,
+    ParseResult,
+    RTResult,
+    Number,
+    Context,
+    IllegalCharError,
+    InvalidSyntaxError,
+    RTError.,
+    Position
+
+    run method
+        Run is responsible for Invoking Lexer, Parser and Interpreter.
+        It invokes them to perform lexical analysis, syntax analysis and Interpretation.
+        Also while doing so, if an error is encountered, It is responsible for returning the error.
+
+    lexer class:
+        make_token is a function of lexer class which creates individual token and appends it in the token list.
+        Also if it identifies character it creates error and routes it to IllegalCharError class.
+        make_token returns two value tokens and error.
+
+
+
+
+    position class:
+        defines the position of individual token that we are defining and indicate the position of the error
+        each class contains his own position class object.
+
+    IllegalCharError class:
+        It inherits error class.
+        It calls error function using super.
+        So basically it conducts error handling.
+
+    token class:
+        It takes token type,value and representation for the token object.
+
+    parser class:
+        It accepts tokens in the sequential and creates the syntax tree.
+
+    parse method:
+        It creates abstract syntax tree for the particular expression.
+        It calls expr
+        Refer grammar.txt
+
+    expr method:
+        It calls term.
+
+    term method:
+        It calls factor.
+
+    factor method:
+        It creates the object ParseResult.
+
+        ParseResult Class:
