@@ -10,7 +10,7 @@ class Error:
         self.details = details
 
     def as_string(self):
-        result += "{}: {}\n".format(self.error_name,self.details)
+        result = "{}: {}\n".format(self.error_name,self.details)
         result += "File {}, line {}".format(self.pos_start.fn,self.pos_start.ln + 1)
         result += "\n\n" + string_with_arrows(self.pos_start.ftxt, self.pos_start, self.pos_end)
         return result
@@ -98,6 +98,9 @@ class Token: #used to create a token, value pair. storing position start and pos
 
         if pos_end:
             self.pos_end = pos_end
+
+    def matches(self, type_, value):
+        return self.type == type_ and self.value == value
 
     def __repr__(self):
         if self.value:
@@ -216,6 +219,21 @@ class NumberNode:
     def __repr__(self):
         return "{}".format(self.tok)
 
+class VarAccessNode:
+    def __init__(self, var_name_tok):
+        self.var_ame_tok = var_name_tok
+
+        self.pos_start = self.var_name_tok.pos_start
+        self.pos_end = self.var_name_tok.pos_end
+
+class VarAssignNode:
+    def __init__(self,var_name_tok, value_node):
+        self.var_name_tok = var_name_tok
+        self.value_node = value_node
+
+        self.pos_start = self.var_name_tok.pos_start
+        self.pos_end = self.value_node.pos_end
+
 class BinOpNode:
     """ Initializes left node, operator token and right node... also holds position start as start of left node and
         position end as end of right node.
@@ -269,6 +287,7 @@ class ParseResult:#check what it does...
 
 class Parser:
     """
+
     Methods :
     1. advance : Increments tok_idx, checks if not out of bounds, updates current token.
     2. parse : used to get the parse result based on the grammar defined in grammar.txt.
@@ -332,6 +351,12 @@ class Parser:
         if tok.type in (TT_INT, TT_FLOAT):
             res.register(self.advance())
             return res.success(NumberNode(tok))
+
+        elif tok.type == IDENTIFIER:
+            res.register_advancement()
+            self.advance()
+            return res.success(VarAccessNode(tok))
+
         elif tok.type == TT_LPAREN:
             res.register(self.advance())
             expr = res.register(self.expr())
@@ -343,7 +368,7 @@ class Parser:
             else:
                 return res.failure(InvalidSyntaxError(self.current_tok.pos_start,self.current_tok.pos_end,"Expected ')'"))
 
-        return res.failure(InvalidSyntaxError(tok.pos_start, tok.por_end, "Expected int, float, '+', '-', or '('"))
+        return res.failure(InvalidSyntaxError(tok.pos_start, tok.pos_end, "Expected int, float, '+', '-', or '('"))
 
     def term(self):
         """
@@ -353,10 +378,46 @@ class Parser:
 
     def expr(self):
         """
-        expr : term ((PLUS|MINUS) term)*
+        expr    : KEYWORD:VAR IDENTIFIER EQ expr
+                : term ((PLUS|MINUS) term)*
         """
-        return self.bin_op(self.term,(TT_PLUS,TT_MINUS))
 
+        res = ParseResult()
+
+        if self.current_tok.matches(TT_KEYWORD, 'VAR'):
+            res.register_advancement()
+            self.advance()
+
+            if self.current_tok.type != TT_IDENTIFIER:
+                return res.failure(InvalidSyntaxError(
+                    self.current_tok.pos_start, self.pos_end,
+                    "Expected Identifier"
+                ))
+
+            var_name = self.current_tok
+            res.register_advancement()
+            self.advance()
+
+            if self.current_tok.type != TT_EQ:
+                return res.failure(InvalidSyntaxError(
+                    self.current_tok.pos_start, self.current_tok.pos_end,
+                    "Expected '='"
+                ))
+
+            res.register_advancement()
+            self.advance()
+            expr = res.register(self.expr())
+            if res.error: return result
+            return res.success(VarAssignNode(var_name,expr))
+
+        node = res.register(self.bin_op(self.term,(TT_PLUS,TT_MINUS)))
+
+        if res.error:
+            return res.failure(InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end,
+                "Expected 'VAR', int, float,identifier, '+', '-', or '('"
+            ))
+        return res.success(node)
     def bin_op(self,func,args,funcb=None):#generalised function for term and expr.
         """
         bin_op    : func (args func)*
@@ -476,7 +537,7 @@ class Number:
     def __repr__(self):
         return str(self.value)
 
-
+#context
 class Context:
     """A class for keeping track of context. takes in display_name, parent context, parent_entry_pos."""
 
@@ -485,6 +546,26 @@ class Context:
         self.parent = parent
         self.parent_entry_pos = parent_entry_pos
 
+#SYMBOL TABLE
+
+class SymbolTable:
+    def __init__(self):
+        self.symbols = {}
+        self.parent = None
+
+    def get(self, name):
+        value = self.symbols.get(name, None)
+        if value == None and self.parent:
+            return self.parent.get(name)
+        return value
+
+    def set(self, name, value):
+        self.symbols[name] = value
+
+    def remove(self, name):
+        del self.symbols[name]
+
+#Interpreter
 class Interpreter:
     """
     Methods defined:

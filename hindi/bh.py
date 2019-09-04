@@ -1,6 +1,9 @@
 from strings_with_arrows import *
+import string
 
 DIGITS = '0123456789'
+LETTERS = string.ascii_letters
+LETTERS_DIGITS = LETTERS + DIGITS
 
 class Error:
     def __init__(self, pos_start, pos_end, error_name, details):
@@ -10,7 +13,7 @@ class Error:
         self.details = details
 
     def as_string(self):
-        result += "{}: {}\n".format(self.error_name,self.details)
+        result = "{}: {}\n".format(self.error_name,self.details)
         result += "File {}, line {}".format(self.pos_start.fn,self.pos_start.ln + 1)
         result += "\n\n" + string_with_arrows(self.pos_start.ftxt, self.pos_start, self.pos_end)
         return result
@@ -72,16 +75,23 @@ class Position:
 
 ### TOKENS
 
-TT_INT		= 'INT'
-TT_POW      = 'POW'
-TT_FLOAT    = 'FLOAT'
-TT_PLUS     = 'PLUS'
-TT_MINUS    = 'MINUS'
-TT_MUL      = 'MUL'
-TT_DIV      = 'DIV'
-TT_LPAREN   = 'LPAREN'
-TT_RPAREN   = 'RPAREN'
-TT_EOF		= 'EOF'
+TT_IDENTIFIER   = 'IDENTIFIER'
+TT_EQ           = 'EQ'
+TT_KEYWORD      = 'KEYWORD'
+TT_INT		    = 'INT'
+TT_POW          = 'POW'
+TT_FLOAT        = 'FLOAT'
+TT_PLUS         = 'PLUS'
+TT_MINUS        = 'MINUS'
+TT_MUL          = 'MUL'
+TT_DIV          = 'DIV'
+TT_LPAREN       = 'LPAREN'
+TT_RPAREN       = 'RPAREN'
+TT_EOF		    = 'EOF'
+
+KEYWORDS = [
+    'VAR'
+]
 
 class Token: #used to create a token, value pair. storing position start and position end of the token.
     """
@@ -147,6 +157,8 @@ class Lexer:
                 self.advance()
             elif self.current_char in DIGITS:
                 tokens.append(self.make_number()) #special handling for numbers.
+            elif self.current_char in LETTERS:
+                tokens.append(self.make_identifier()) #special handling for letters.
             elif self.current_char == '+':
                 tokens.append(Token(TT_PLUS, pos_start= self.pos))
                 self.advance()
@@ -161,6 +173,9 @@ class Lexer:
                 self.advance()
             elif self.current_char == '/':
                 tokens.append(Token(TT_DIV, pos_start= self.pos))
+                self.advance()
+            elif self.current_char == '=':
+                tokens.append(Token(TT_EQ, pos_start= self.pos))
                 self.advance()
             elif self.current_char == '(':
                 tokens.append(Token(TT_LPAREN, pos_start= self.pos))
@@ -199,6 +214,18 @@ class Lexer:
             return Token(TT_INT, int(num_str), pos_start, self.pos) #returns integer if dot count == 0
         else:
             return Token(TT_FLOAT, float(num_str),pos_start,self.pos) # returns float otherwise.
+
+    def make_identifier(self):
+        id_str = ''
+        pos_start = self.pos.copy()
+
+        while self.current_char != None and self.current_char in LETTERS_DIGITS + '_':
+            id_str += self.current_char
+            self.advance()
+
+        tok_type = TT_KEYWORD if id_str in KEYWORDS else TT_IDENTIFIER
+        return Token(tok_type, id_str, pos_start, self.pos)
+
 
 
 
@@ -343,7 +370,7 @@ class Parser:
             else:
                 return res.failure(InvalidSyntaxError(self.current_tok.pos_start,self.current_tok.pos_end,"Expected ')'"))
 
-        return res.failure(InvalidSyntaxError(tok.pos_start, tok.por_end, "Expected int, float, '+', '-', or '('"))
+        return res.failure(InvalidSyntaxError(tok.pos_start, tok.pos_end, "Expected int, float, '+', '-', or '('"))
 
     def term(self):
         """
