@@ -1,4 +1,10 @@
-expr    : term ((PLUS|MINUS) term)*
+expr    : KEYWORD:DABBA IDENTIFIER EQ expr
+		: comp-expr ((KEYWORD:AUR|KEYWORD:YATOH) comp-expr)*
+
+comp-expr		: ULTA comp-expr
+				: arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
+
+arith-expr		: term ((PLUS|MINUS) term)*
 
 term    : factor ((MUL|DIV) factor)*
 
@@ -7,5 +13,13 @@ factor	: (PLUS|MINUS) factor
 
 power	: atom (POW factor)*
 
-atom 	: INT|FLOAT
+atom 	: INT|FLOAT|IDENTIFIER
 		: LPAREN expr RPAREN
+		: if-expr
+if-expr : KEYWORD:AGAR expr KEYWORD:TOH expr
+		  (KEYWORD:NAHITOH expr KEYWORD:TOH expr)*
+		  (KEYWORD:MAGAR expr)*
+
+
+
+		   , shell.py
