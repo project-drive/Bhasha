@@ -15,3 +15,11 @@ power	: atom (POW factor)*
 
 atom 	: INT|FLOAT|IDENTIFIER
 		: LPAREN expr RPAREN
+		: if-expr
+if-expr : KEYWORD:AGAR expr KEYWORD:TOH expr
+		  (KEYWORD:NAHITOH expr KEYWORD:TOH expr)*
+		  (KEYWORD:MAGAR expr)*
+
+
+
+		   , shell.py

@@ -104,7 +104,11 @@ KEYWORDS = [
     'DABBA',
     'AUR', #AND
     'YATOH', #OR
-    'ULTA' #NOT
+    'ULTA', #NOT
+    'AGAR', #if
+    'TOH', #then
+    'NAHITOH', #ELIF
+    'MAGAR' #else
 ]
 
 class Token: #used to create a token, value pair. storing position start and position end of the token.
@@ -373,6 +377,18 @@ class UnaryOpNode():
         return "({},{})".format(self.op_tok,self.node)
 
 
+class IfNode:
+    """docstring for IfNode."""
+
+    def __init__(self, cases, else_case):
+        self.cases = cases
+        self.else_case = else_case
+
+        self.pos_start = self.cases[0][0].pos_start
+        self.pos_end = (self.else_case or self.cases[len(self.cases) - 1][0]).pos_end
+
+
+
 
 ### Need to understand Parse Result.
 class ParseResult:#check what it does...
@@ -411,6 +427,8 @@ class Parser:
     6. term
     7. expr
     8. factor
+    9. arith_expr
+    10. comp_expr
     """
 
     def __init__(self, tokens):
@@ -429,6 +447,65 @@ class Parser:
         if not res.error and self.current_tok.type != TT_EOF: #check what it does. why not res.error???? for that check expr().
             return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end,"Expected the defined operators."))
         return res
+
+    def if_expr(self):
+        """
+        NEEDS documentation
+
+        """
+        res = ParseResult()
+        cases = []
+        else_case = None
+
+        if not self.current_tok.matches(TT_KEYWORD, 'AGAR'):
+            return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end,"Expected IF"))
+
+        res.register_advancement()
+        self.advance()
+
+        condition = res.register(self.expr())
+        if res.error:
+            return res
+
+        if not self.current_tok.matches(TT_KEYWORD,'TOH'):
+            return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected TOH"))
+
+        res.register_advancement()
+        self.advance()
+
+        expr = res.register(self.expr())
+        if res.error:
+            return res
+        cases.append((condition, expr))
+
+        while self.current_tok.matches(TT_KEYWORD, "NAHITOH"):
+            res.register_advancement()
+            self.advance()
+
+            condition = res.register(self.expr())
+            if res.error:
+                return res
+
+            if not self.current_tok.matches(TT_KEYWORD, "TOH"):
+                return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected TOH"))
+
+            res.register_advancement()
+            self.advance()
+            expr = res.register(self.expr())
+            if res.error:
+                return res
+            cases.append((condition, expr))
+
+        if self.current_tok.matches(TT_KEYWORD,'MAGAR'):
+            res.register_advancement()
+            self.advance()
+
+            else_case = res.register(self.expr())
+            if res.error:
+                return res
+
+        return res.success(IfNode(cases, else_case))
+
 
     def atom(self):
         """
@@ -459,6 +536,13 @@ class Parser:
                 return res.success(expr)
             else:
                 return res.failure(InvalidSyntaxError(self.current_tok.pos_start,self.current_tok.pos_end,"Expected ')'"))
+        elif tok.matches(TT_KEYWORD, 'AGAR'):
+            #IF statement handling.
+            if_expr = res.register(self.if_expr())
+            if res.error: return res
+            return res.success(if_expr)
+
+        return res.failure(InvalidSyntaxError(tok.pos_start, tok.pos_end,"Expected int, float, identifier, '+', '-', '(', "))
 
     def power(self):
         """
@@ -609,6 +693,17 @@ class Number:
     4. subbed_by : params - Number object. Used to subtract number from self.
     5. multed_by : params - Number object. Used to multiply number with self.
     6. dived_by : params - Number object. Used to divide number from self (self/number).
+    7. powed_by
+    8. get_comparison_eq
+    9. get_comparison_ne
+    10. get_comparison_lt
+    11. get_comparison_gt
+    12. get_comparison_lte
+    13. get_comparison_gte
+    14. anded_by
+    15. notted
+    16. ored_by
+    17. copy
 
     """
 
@@ -713,6 +808,9 @@ class Number:
         copy.set_context(self.context)
         return copy
 
+    def is_true(self):
+        return self.value != 0
+
     def __repr__(self):
         return str(self.value)
 
@@ -766,8 +864,9 @@ class Interpreter:
     3. visit_NumberNode(node,context) : Returns RTResult object, with number value in it.
     4. visit_BinOpNode(node,context) : Performs binary operation and then returns the RTResult object.
     5. visit_UnaryOpNode(node,context) : Performs unary operation and then returns the RTResult object.
-
-
+    6. visit_VarAccessNode
+    7. visit_VarAssignNode
+    8. visit_IfNode(node, context)
 
     Individual function documentation remaining.
     """
@@ -866,6 +965,26 @@ class Interpreter:
         else:
             return res.success(number.set_pos(node.pos_start, node.pos_end))
 
+    def visit_IfNode(self, node, context):
+        res = RTResult()
+
+        for condition, expr in node.cases:
+            condition_value = res.register(self.visit(condition, context))
+            if res.error:
+                return res
+            if condition_value.is_true():
+                expr_value = res.register(self.visit(expr, context))
+                if res.error:
+                    return res
+                return res.success(expr_value)
+
+        if node.else_case:
+            else_value = res.register(self.visit(node.else_case, context))
+            if res.error:
+                return res
+            return res.success(else_value)
+
+        return res.success(None)
 
 global_symbol_table = SymbolTable()
 global_symbol_table.set("null",Number(0))
