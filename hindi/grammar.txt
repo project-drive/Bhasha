@@ -1,5 +1,10 @@
 expr    : KEYWORD:DABBA IDENTIFIER EQ expr
-		: term ((PLUS|MINUS) term)*
+		: comp-expr ((KEYWORD:AUR|KEYWORD:YATOH) comp-expr)*
+
+comp-expr		: ULTA comp-expr
+				: arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
+
+arith-expr		: term ((PLUS|MINUS) term)*
 
 term    : factor ((MUL|DIV) factor)*
 
