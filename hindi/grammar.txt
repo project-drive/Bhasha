@@ -16,10 +16,19 @@ power	: atom (POW factor)*
 atom 	: INT|FLOAT|IDENTIFIER
 		: LPAREN expr RPAREN
 		: if-expr
+
 if-expr : KEYWORD:AGAR expr KEYWORD:TOH expr
 		  (KEYWORD:NAHITOH expr KEYWORD:TOH expr)*
 		  (KEYWORD:MAGAR expr)?
 
 
+for-expr		: KEYWORD:YEH IDENTIFIER EQ expr KEYWORD:ISTAK expr
+		  		(KEYWORD:KADAM expr)? KEYWORD:TOH expr
 
-		   , shell.py
+while-expr	: KEYWORD:JABTAK expr KEYWORD:TOH expr
+
+				FOR == YEH
+				TO == ISTAK
+				STEP = KADAM
+				THEN = TOH
+				while = JABTAK
