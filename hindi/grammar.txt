@@ -18,7 +18,7 @@ atom 	: INT|FLOAT|IDENTIFIER
 		: if-expr
 if-expr : KEYWORD:AGAR expr KEYWORD:TOH expr
 		  (KEYWORD:NAHITOH expr KEYWORD:TOH expr)*
-		  (KEYWORD:MAGAR expr)*
+		  (KEYWORD:MAGAR expr)?
 
 
 

@@ -6,6 +6,10 @@ LETTERS = string.ascii_letters
 LETTERS_DIGITS = LETTERS + DIGITS
 
 class Error:
+    """
+    Parent Error class, takes in pos_start, pos_end, error_name and details of the error.
+    contains method as_string , which returns error.
+    """
     def __init__(self, pos_start, pos_end, error_name, details):
         self.pos_start = pos_start
         self.pos_end = pos_end
@@ -19,18 +23,30 @@ class Error:
         return result
 
 class IllegalCharError(Error):
+    """
+    Used when illegal character is encountered, sends in error name to class error as Illegal Character.
+    """
     def __init__(self, pos_start, pos_end, details):
         super().__init__(pos_start, pos_end, 'Illegal Character', details)
 
 class ExpectedCharError(Error):
+    """
+    Used when there is a missing character, sends in error name to class error as Expected Character.
+    """
     def __init__(self, pos_start,pos_end, details):
         super().__init__(pos_start,pos_end,'Expected Character', details)
 
 class InvalidSyntaxError(Error):
+    """
+    Used when Invalid Syntax is encountered, sends in error name to class error as Invalid Syntax.
+    """
     def __init__(self, pos_start, pos_end, details=''):
         super().__init__(pos_start, pos_end, 'Invalid Syntax', details)
 
 class RTError(Error):
+    """
+    Used when Runtime error is encountered, sends in error name to class error as Runtime Error.
+    """
     def __init__(self, pos_start, pos_end, details, context):
         super().__init__(pos_start, pos_end, 'Runtime Error', details)
         self.context = context
@@ -57,6 +73,9 @@ class RTError(Error):
 class Position:
     """
     Class for keeping track of position.
+    Methods :
+    1. advance: updates current index pointer, if line ends, updates line number.
+    2. copy: returns a copy of its own POSITION object.
     """
     def __init__(self, idx, ln, col, fn, ftxt):
         self.idx = idx
@@ -152,6 +171,11 @@ class Lexer:
     1. advance: move ahead. character by character.
     2. make_tokens: generates list of tokens
     3. make number: special handling function for make_tokens to make number.
+    4. make_identifier: special handling function for identifier and KEYWORDS.
+    5. make_not_equals: special handling function for '!='.
+    6. make_equals: special handling function for '==' or '='.
+    7. make_less_than: special handling function for '<' or '<='.
+    8. make_greater_than: special handling function for '>' or '>='.
 
     """
     def __init__(self, fn, text):
@@ -248,6 +272,9 @@ class Lexer:
             return Token(TT_FLOAT, float(num_str),pos_start,self.pos) # returns float otherwise.
 
     def make_identifier(self):
+        """
+        gets an identifier, checks if the identifier found is a KEYWORD or IDENTIFIER, returns the token accordingly.
+        """
         id_str = ''
         pos_start = self.pos.copy()
 
@@ -315,9 +342,6 @@ class Lexer:
 
 
 
-
-
-
 class NumberNode:
     """
     Used for holding number token, its start position and end position.
@@ -334,6 +358,9 @@ class NumberNode:
         return "{}".format(self.tok)
 
 class VarAccessNode:
+    """
+    Used for holding variable name, start position and end position.
+    """
     def __init__(self,var_name_tok):
         self.var_name_tok = var_name_tok
 
@@ -341,6 +368,9 @@ class VarAccessNode:
         self.pos_end = self.var_name_tok.pos_end
 
 class VarAssignNode:
+    """
+    Used for holding variable name and variable value... also its start position and end position.
+    """
     def __init__(self, var_name_tok, value_node):
         self.var_name_tok = var_name_tok
         self.value_node = value_node
@@ -378,7 +408,9 @@ class UnaryOpNode():
 
 
 class IfNode:
-    """docstring for IfNode."""
+    """
+    Holds cases list and else case.
+    """
 
     def __init__(self, cases, else_case):
         self.cases = cases
@@ -436,13 +468,19 @@ class Parser:
         self.tok_idx = -1
         self.advance()
 
-    def advance(self): #returns next token as current token.
+    def advance(self):
+    """
+    returns next token as current token.
+    """
         self.tok_idx += 1
         if self.tok_idx < len(self.tokens):
             self.current_tok = self.tokens[self.tok_idx]
         return self.current_tok
 
-    def parse(self):#special handling functions : expr.
+    def parse(self):
+    """
+    special handling function : calls expr.
+    """
         res = self.expr()
         if not res.error and self.current_tok.type != TT_EOF: #check what it does. why not res.error???? for that check expr().
             return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end,"Expected the defined operators."))
@@ -450,7 +488,9 @@ class Parser:
 
     def if_expr(self):
         """
-        NEEDS documentation
+        AGAR - EXPR - TOH - EXPR
+        (NAHITOH - EXPR - TOH - EXPR)* #wrapped in while.
+        MAGAR - EXPR
 
         """
         res = ParseResult()
@@ -458,7 +498,7 @@ class Parser:
         else_case = None
 
         if not self.current_tok.matches(TT_KEYWORD, 'AGAR'):
-            return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end,"Expected IF"))
+            return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end,"Expected AGAR"))
 
         res.register_advancement()
         self.advance()
@@ -511,6 +551,7 @@ class Parser:
         """
         atom : INT|FLOAT
              : LPAREN expr RPAREN
+             : if_expr
         """
         res = ParseResult()
         tok = self.current_tok
@@ -579,9 +620,17 @@ class Parser:
         return self.bin_op(self.factor,(TT_MUL,TT_DIV))
 
     def arith_expr(self):
+        """
+        arith-expr		: term ((PLUS|MINUS) term)*
+        """
         return self.bin_op(self.term, (TT_PLUS, TT_MINUS))
 
     def comp_expr(self):
+        """
+        comp-expr		: ULTA comp-expr
+        				: arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
+
+        """
         res = ParseResult()
 
         if self.current_tok.matches(TT_KEYWORD,"ULTA"):
