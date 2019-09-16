@@ -11,11 +11,17 @@ term    : factor ((MUL|DIV) factor)*
 factor	: (PLUS|MINUS) factor
 		: power
 
-power	: atom (POW factor)*
+power	: call (POW factor)*
+
+call	: atom (LPAREN  (expr (COMMA expr)*)? RPAREN)?
 
 atom 	: INT|FLOAT|IDENTIFIER
 		: LPAREN expr RPAREN
 		: if-expr
+		:for-expr
+		: while-expr
+		:func-def
+
 
 if-expr : KEYWORD:AGAR expr KEYWORD:TOH expr
 		  (KEYWORD:NAHITOH expr KEYWORD:TOH expr)*
@@ -27,8 +33,22 @@ for-expr		: KEYWORD:YEH IDENTIFIER EQ expr KEYWORD:ISTAK expr
 
 while-expr	: KEYWORD:JABTAK expr KEYWORD:TOH expr
 
-				FOR == YEH
-				TO == ISTAK
-				STEP = KADAM
-				THEN = TOH
-				while = JABTAK
+func-def	: KEYWORD:FUN IDENTIFIER?
+				LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
+				ARROW expr
+
+
+
+TOKEN: comma, arror; KEYWORD: fun,
+Lexer: 'TT_COMMA', update '-'. add make_minus_or_arrow().
+NODES: funcDefNode, callnode
+parser: atom, expr.
+func_def. , call, power.
+
+Interpreter ,,, value base class.
+number class: inherits value., complete number.
+function class(Value)...
+
+visit function_def_node.
+visit callnode.
+Symbol table. 
