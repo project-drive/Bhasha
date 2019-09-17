@@ -1,15 +1,17 @@
-expr    : KEYWORD:VAR IDENTIFIER EQ expr
-				: term ((PLUS|MINUS) term)*
+expr    		: KEYWORD:DABBA IDENTIFIER EQ expr
+						:comp-expr ((KEYWORD:ATE|KEYWORD:YA) comp-expr)*
 
-term    : factor ((MUL|DIV) factor)*
+comp-expr		: NAHI comp-expr
+						: arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
 
-factor	: (PLUS|MINUS) factor
-				: power
+arith-expr	: term ((PLUS|MINUS) term)*
 
-power		: atom (POW factor)*
+term    		: factor ((MUL|DIV) factor)*
 
-atom 		: INT|FLOAT
-				: LPAREN expr RPAREN
+factor			: (PLUS|MINUS) factor
+						: power
 
+power				: atom (POW factor)*
 
-hello
+atom 				: INT|FLOAT
+						: LPAREN expr RPAREN
