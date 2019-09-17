@@ -85,12 +85,21 @@ TT_PLUS         = 'PLUS'
 TT_MINUS        = 'MINUS'
 TT_MUL          = 'MUL'
 TT_DIV          = 'DIV'
+TT_EQ           = 'EE'
+TT_NE           = 'NE'
+TT_LT           = 'LT'
+TT_GT           = 'GT'
+TT_LTE          = 'LTE'
+TT_GTE          = 'GTE'
 TT_LPAREN       = 'LPAREN'
 TT_RPAREN       = 'RPAREN'
 TT_EOF		    = 'EOF'
 
 KEYWORDS = [
-    'DABBA'
+    'DABBA',
+    'ATE',
+    'YA',
+    'NAHI'
 ]
 
 class Token: #used to create a token, value pair. storing position start and position end of the token.
@@ -130,7 +139,8 @@ class Lexer:
     1. advance: move ahead. character by character.
     2. make_tokens: generates list of tokens
     3. make number: special handling function for make_tokens to make number.
-
+    4. make_identifier:
+    5. make_not_equals: it checks it there is '=' after a '!' and then assigns it a not equals token  or esle sends ExpectedCharError
     """
     def __init__(self, fn, text):
         self.fn = fn
@@ -183,6 +193,16 @@ class Lexer:
             elif self.current_char == ')':
                 tokens.append(Token(TT_RPAREN, pos_start= self.pos))
                 self.advance()
+            elif self.current_char == '!':
+                tok, error = self.make_not_equals()
+                if error: return [], error
+                tokens.append(tok)
+            elif self.current_char == '=':
+                tokens.append(self.make_equals())
+            elif self.current_char == '>':
+                tokens.append(self.make_greater_than())
+            elif self.current_char == '<':
+                tokens.append(self.make_less_than())
             else:
                 pos_start = self.pos.copy()
                 char = self.current_char
@@ -226,6 +246,51 @@ class Lexer:
         tok_type = TT_KEYWORD if id_str in KEYWORDS else TT_IDENTIFIER
         return Token(tok_type, id_str, pos_start, self.pos)
 
+    def make_not_equals(self):
+        pos_start = self.pos.copy()
+        self.advacne()
+
+        if self.current_char == '=':
+            self.advance()
+            return Token(TT_NE, pos_start = pos_start, pos_end = self.pos), None
+
+        self.advance()
+        return None, ExpectedCharError(pos_start, self.pos, "'=' (after '!')")
+
+    def make_equals(self):
+        tok_type = TT_EQ
+        pos_start = self.pos.copy()
+        self.advance()
+
+        if self.current_char == '=':
+            self.advance()
+            tok_type =TT_EE
+
+        return Token(token_type, pos_start = pos_start, pos_end = self.pos)
+
+    def make_greater_than(self):
+        tok_type = TT_GT
+        pos_start = self.pos.copy()
+        self.advance()
+
+        if self.current_char == '=':
+            self.advance()
+            tok_type =TT_GTE
+
+        return Token(token_type, pos_start = pos_start, pos_end = self.pos)
+
+    def make_less_than(self):
+        tok_type = TT_LT
+        pos_start = self.pos.copy()
+        self.advance()
+
+        if self.current_char == '=':
+            self.advance()
+            tok_type =TT_LTE
+
+        return Token(token_type, pos_start = pos_start, pos_end = self.pos)
+
+        ## TODO: 1.resume from 5:20 - edit grammer rules and then parser 
 
 
 ###Nodes
