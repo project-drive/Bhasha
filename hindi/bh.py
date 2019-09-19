@@ -554,18 +554,18 @@ class Parser:
         self.advance()
 
     def advance(self):
-    """
-    returns next token as current token.
-    """
+        """
+        returns next token as current token.
+        """
         self.tok_idx += 1
         if self.tok_idx < len(self.tokens):
             self.current_tok = self.tokens[self.tok_idx]
         return self.current_tok
 
     def parse(self):
-    """
-    special handling function : calls expr.
-    """
+        """
+        special handling function : calls expr.
+        """
         res = self.expr()
         if not res.error and self.current_tok.type != TT_EOF: #check what it does. why not res.error???? for that check expr().
             return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end,"Expected the defined operators."))
