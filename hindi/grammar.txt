@@ -36,13 +36,3 @@ while-expr	: KEYWORD:JABTAK expr KEYWORD:TOH expr
 func-def	: KEYWORD:FUN IDENTIFIER?
 				LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
 				ARROW expr
-
-
-
-
-
-function class(Value)...
-
-visit function_def_node.
-visit callnode.
-Symbol table.
