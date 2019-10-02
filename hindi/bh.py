@@ -677,7 +677,22 @@ class Parser:
 
         if tok.type in (TT_INT, TT_FLOAT):
             res.register_advancement()
-            self.advance()
+            self.advance()    def visit_UnaryOpNode(self, node, context):
+        res = RTResult()
+        number = res.register(self.visit(node.node,context))
+        if res.error:
+            return res
+        error = None
+
+        if node.op_tok.type == TT_MINUS:
+            number, error = number.multed_by(Number(-1))
+        elif node.op_tok.type.matches(TT_KEYWORD, 'nahi'):
+            number, error = number.notted()
+
+        if error:
+            return res.failure(error)
+        else:
+            return res.success(number.set_pos(node.pos_start, node.pos_end))
             return res.success(NumberNode(tok))
         elif tok.type in TT_IDENTIFIER:
             #whenever comes accross this identifier, VarAccessNode will be returned.
@@ -918,7 +933,9 @@ class Number:
         """
         returns Number object, which is subtraction performed with self and the passed number object.
         """
-        if isinstance(other,Number):#checks if the class Number and other are same.
+        if isinstance(other,Number):#checks if the class Number and otherglobal_symbol_table = SymbolTable()
+global_symbol_table.set("null",Number(0))
+ are same.
             return Number(self.value - other.value).set_context(self.context), None
 
     def multed_by(self,other):
@@ -961,7 +978,9 @@ class Number:
 
     def get_comparison_gt(self, other):
         if isinstance(other, Number):
-            return Number(int(self.value > other.value)).set_context(self.context), None
+            return Number(int(self.value > other.value)).set_context(selfglobal_symbol_table = SymbolTable()
+global_symbol_table.set("null",Number(0))
+.context), None
 
     def get_comparison_lte(self, other):
         if isinstance(other, Number):
@@ -979,7 +998,9 @@ class Number:
         if isinstance(other, Number):
             return Number(int(self.value or other.value)).set_context(self.context), None
 
-    def notted(self):
+    def notted(self):global_symbol_table = SymbolTable()
+global_symbol_table.set("null",Number(0))
+
         return Number(1 if self.value == 0 else 0).set_context(self.context), None
 
     def copy(self):
