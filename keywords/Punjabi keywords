@@ -2,7 +2,8 @@ null - 	sifar
 for - lai
 while - Jadotai
 if - je
-else - duja
+else - nahita
+elif - ohnahi
 void - khali
 input - lena
 output - chapo

@@ -15,3 +15,8 @@ power				: atom (POW factor)*
 
 atom 				: INT|FLOAT
 						: LPAREN expr RPAREN
+						: IF expr
+
+if-expr 		: KEYWORD:AGAR expr KEYWORD:TOH expr
+						  (KEYWORD:NAHITOH expr KEYWORD:TOH expr)*
+						  (KEYWORD:MAGAR expr)?

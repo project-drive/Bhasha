@@ -126,8 +126,8 @@ KEYWORDS = [
     'NAHI', #NOT
     'JE', #if
     'TA', #then
-    'NAHITA', #ELIF
-    'DUJA', #else
+    'OHNAHI', #ELIF
+    'NAHITA', #else
     'LAI', #FOR
     'ISTAK', #TO
     'KADAM', #STEP
