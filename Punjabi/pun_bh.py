@@ -811,7 +811,7 @@ class Parser:
                 return res
             else:
                 #passing variable name and value of the evaluated expr.
-                return res.success(VarAssignNode(var_name, expr))
+                return res.success(VarAssignNode(var_name, expr()))
 
         node = res.register(self.bin_op(self.comp_expr, ((TT_KEYWORD , "ATE"), (TT_KEYWORD , "YA"))))
 
@@ -1219,7 +1219,9 @@ class Interpreter:
         return res.success(None)
 
 global_symbol_table = SymbolTable()
-global_symbol_table.set("null",Number(0))
+global_symbol_table.set("sikar", Number(0))         #null - sikar
+global_symbol_table.set("sach", Number(1))
+global_symbol_table.set("jhoot", Number(0))
 
 def run(fn, text):
     lexer = Lexer(fn, text)

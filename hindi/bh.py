@@ -111,8 +111,6 @@ TT_MUL          = 'MUL'
 TT_DIV          = 'DIV'
 TT_LPAREN       = 'LPAREN'
 TT_RPAREN       = 'RPAREN'
-TT_COMMA        = 'COMMA'
-TT_ARROW        = 'ARROW'
 TT_EE           = 'EE'
 TT_NE           = 'NE'
 TT_LT           = 'LT'
@@ -134,7 +132,6 @@ KEYWORDS = [
     'ISTAK', #TO
     'KADAM', #STEP
     'JABTAK' #WHILE
-    'FUN' #function decl.
 ]
 
 class Token: #used to create a token, value pair. storing position start and position end of the token.
@@ -219,7 +216,8 @@ class Lexer:
                 tokens.append(Token(TT_PLUS, pos_start= self.pos))
                 self.advance()
             elif self.current_char == '-':
-                tokens.append(self.make_minus_or_arrow())
+                tokens.append(Token(TT_MINUS, pos_start= self.pos))
+                self.advance()
             elif self.current_char == '*':
                 tokens.append(Token(TT_MUL, pos_start= self.pos))
                 self.advance()
@@ -246,15 +244,11 @@ class Lexer:
                 tokens.append(self.make_less_than()) #special handling for less than or less than equals
             elif self.current_char == '>':
                 tokens.append(self.make_greater_than()) # special handling for greater than or greater than equals.
-            elif self.current_char == ',':
-                tokens.append(Token(TT_COMMA, pos_start=self.pos))
-                self.advance()
             else:
                 pos_start = self.pos.copy()
                 char = self.current_char
                 self.advance()
                 return [], IllegalCharError(pos_start,self.pos,"'" + char + "'")
-
         tokens.append(Token(TT_EOF,pos_start=self.pos))
         return tokens, None
 
@@ -294,20 +288,6 @@ class Lexer:
 
         tok_type = TT_KEYWORD if id_str in KEYWORDS else TT_IDENTIFIER
         return Token(tok_type, id_str, pos_start, self.pos)
-
-    def make_minus_or_arrow(self):
-        """
-        Returns TT_MINUS if '-' and TT_ARROW if '->'
-        """
-        tok_type = TT_MINUS
-        pos_start = self.pos.copy()
-        self.advance()
-
-        if self.current_char == '>':
-            self.advance()
-            tok_type = TT_ARROW
-
-        return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
 
     def make_not_equals(self):
         """
@@ -469,40 +449,6 @@ class WhileNode:
 
         self.pos_start = self.condition_node.pos_start
         self.pos_end = self.body_node.pos_end
-
-class FuncDefNode:
-    """
-    Holds function name, arguments and function body.
-    """
-    def __init__(self, var_name_tok, arg_name_toks, body_node):
-        self.var_name_tok = var_name_tok
-        self.arg_name_toks = arg_name_toks
-        self.body_node = body_node
-
-        #If fun name defined, args defined, or none defined.
-        if self.var_name_tok:
-            self.pos_start = self.var_name_tok.pos_start
-        elif len(self.arg_name_toks) > 0:
-            self.pos_start = self.arg_name_toks[0].pos_start
-        else:
-            self.pos_start = self.body_node.pos_start
-
-        self.pos_end = self.body_node.pos_end
-
-class CallNode:
-    """Needs understanding."""
-
-    def __init__(self, node_to_call, arg_nodes):
-        self.node_to_call = node_to_call
-        self.arg_nodes = arg_nodes
-
-        self.pos_start = self.node_to_call.pos_start
-
-        if len(self.arg_nodes) > 0:
-            self.pos_end = self.arg_nodes[len(self.arg_nodes) - 1].pos_end
-        else:
-            self.pos_end = self.node_to_call.pos_end
-
 
 
 
@@ -717,78 +663,6 @@ class Parser:
 
         return res.success(WhileNode(condition, body))
 
-    def func_def(self):
-        """
-        special handling function for function defination.
-        KEYWORD:        FUN IDENTIFIER?
-        				LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
-        				ARROW expr
-        """
-
-        res = ParseResult()
-
-        if not self.current_tok.matches(TT_KEYWORD,'FUN'):
-            return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end,"Expected FUN"))
-
-        res.register_advancement()
-        self.advance()
-
-        if self.current_tok.type == TT_IDENTIFIER:
-            var_name_tok = self.current_tok
-            res.register_advancement()
-            self.advance()
-
-            if self.current_tok.type != TT_LPAREN:
-                return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected ("))
-
-        else:
-            #No function name defined
-            var_name_tok = None
-            if self.current_tok.type != TT_LPAREN:
-                return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected ("))
-
-        res.register_advancement()
-        self.advance()
-        arg_name_toks = []
-
-        if self.current_tok.type == TT_IDENTIFIER:
-            arg_name_toks.append(self.current_tok)
-            res.register_advancement()
-            self.advance()
-
-            while self.current_tok.type == TT_COMMA:
-                res.register_advancement()
-                self.advance()
-
-                if self.current_tok.type != TT_IDENTIFIER:
-                    return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected IDENTIFIER"))
-
-                arg_name_toks.append(self.current_tok)
-                res.register_advancement()
-                self.advance()
-
-            if self.current_tok.type != TT_RPAREN:
-                return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected , or )"))
-
-        else:
-            if self.current_tok.type != TT_RPAREN:
-                return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected )"))
-
-        res.register_advancement()
-        self.advance()
-
-        if self.current_tok.type != TT_ARROW:
-            return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected ->"))
-
-        res.register_advancement()
-        self.advance()
-        node_to_return = res.register(self.expr())
-        if res.error:
-            return res
-
-        return res.success(FuncDefNode(var_name_tok, arg_name_toks, node_to_return))
-
-
 
 
 
@@ -797,16 +671,28 @@ class Parser:
         atom : INT|FLOAT
              : LPAREN expr RPAREN
              : if_expr
-             : for_expr
-             : while_expr
-             : func_def
         """
         res = ParseResult()
         tok = self.current_tok
 
         if tok.type in (TT_INT, TT_FLOAT):
             res.register_advancement()
-            self.advance()
+            self.advance()    def visit_UnaryOpNode(self, node, context):
+        res = RTResult()
+        number = res.register(self.visit(node.node,context))
+        if res.error:
+            return res
+        error = None
+
+        if node.op_tok.type == TT_MINUS:
+            number, error = number.multed_by(Number(-1))
+        elif node.op_tok.type.matches(TT_KEYWORD, 'nahi'):
+            number, error = number.notted()
+
+        if error:
+            return res.failure(error)
+        else:
+            return res.success(number.set_pos(node.pos_start, node.pos_end))
             return res.success(NumberNode(tok))
         elif tok.type in TT_IDENTIFIER:
             #whenever comes accross this identifier, VarAccessNode will be returned.
@@ -843,58 +729,13 @@ class Parser:
             if res.error: return res
             return res.success(while_expr)
 
-        elif tok.matches(TT_KEYWORD, 'FUN'):
-            func_def = res.register(self.func_def())
-            if res.error:
-                return res
-            return res.success(func_def)
-
         return res.failure(InvalidSyntaxError(tok.pos_start, tok.pos_end,"Expected int, float, identifier, '+', '-', '(', "))
 
     def power(self):
         """
         power : atom (pow factor)*
         """
-        return self.bin_op(self.call, (TT_POW, ), self.factor)
-
-    def call(self):
-        """
-        why was call function defined???
-        call	: atom (LPAREN  (expr (COMMA expr)*)? RPAREN)?
-        """
-        res = ParseResult()
-        atom = res.register(self.atom())
-        if res.error:
-            return res
-
-        if self.current_tok.type == TT_LPAREN:
-            res.register_advancement()
-            self.advance()
-            arg_nodes = []
-
-            if self.current_tok.type == TT_RPAREN:
-                res.register_advancement()
-                self.advance()
-            else:
-                arg_nodes.append(res.register(self.expr()))
-                if res.error:
-                    return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected ')', 'DABBA', 'AGAR', 'YEH', 'JABTAK', 'FUN', int, float, identifier, '+', '-', '(' or 'ULTA'"))
-
-                while self.current_tok.type == TT_COMMA:
-                    res.register_advancement()
-                    self.advance()
-
-                    arg_nodes.append(res.register(self.expr()))
-                    if res.error:
-                        return res
-
-                if self.current_tok.type != TT_RPAREN:
-                    return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected , or )"))
-
-                res.register_advancement()
-                self.advance()
-            return res.success(CallNode(atom,arg_nodes))
-        return res.success(atom)
+        return self.bin_op(self.atom, (TT_POW, ), self.factor)
 
     def factor(self):
         """
@@ -990,7 +831,7 @@ class Parser:
         node = res.register(self.bin_op(self.comp_expr, ((TT_KEYWORD , "AUR"), (TT_KEYWORD , "YATOH"))))
 
         if res.error:
-            return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected int, float,DABBA, identifier, '+', '-', or '(' or ULTA"))
+            return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected int, float,DABBA, identifier, '+', '-', or '('"))
         return res.success(node)
 
     def bin_op(self,func_a,ops,func_b=None):#generalised function for term and expr.
@@ -1037,80 +878,8 @@ class RTResult:
         self.error = error
         return self
 
-class Value:
-    def __init__(self):
-        self.set_pos()
-        self.set_context()
 
-    def set_pos(self, pos_start=None, pos_end=None):
-        self.pos_start = pos_start
-        self.pos_end = pos_end
-        return self
-
-    def set_context(self, context=None):
-        self.context = context
-        return self
-
-    def added_to(self,other):
-        return None, self.illegal_operation(other)
-
-    def subbed_by(self,other):
-        return None, self.illegal_operation(other)
-
-    def multed_by(self,other):
-        return None, self.illegal_operation(other)
-
-    def dived_by(self,other):
-        return None, self.illegal_operation(other)
-
-    def powed_by(self, other):
-        return None, self.illegal_operation(other)
-
-    def get_comparison_eq(self, other):
-        return None, self.illegal_operation(other)
-
-    def get_comparison_ne(self, other):
-        return None, self.illegal_operation(other)
-
-    def get_comparison_lt(self, other):
-        return None, self.illegal_operation(other)
-
-    def get_comparison_gt(self, other):
-        return None, self.illegal_operation(other)
-
-    def get_comparison_lte(self, other):
-        return None, self.illegal_operation(other)
-
-    def get_comparison_gte(self, other):
-        return None, self.illegal_operation(other)
-
-    def anded_by(self, other):
-        return None, self.illegal_operation(other)
-
-    def ored_by(self, other):
-        return None, self.illegal_operation(other)
-
-    def notted(self):
-        return None, self.illegal_operation(other)
-
-    def execute(self,args):
-        return RTResult().failure(self.illegal_operation())
-
-    def copy(self):
-        raise Exception('No copy method defined')
-
-    def is_true(self):
-        return False
-
-    def illegal_operation(self,other=None):
-        if not other:
-            other = self
-        return RTError(self.pos_start, other.pos_end, "Illegal operation",self.context)
-
-
-
-
-class Number(Value):
+class Number:
     """
     Methods defined:
     1. set_pos : params - start, end. Used to set position start and end
@@ -1134,9 +903,24 @@ class Number(Value):
     """
 
     def __init__(self, arg):
-        super().__init__()
         self.value = arg
+        self.set_pos()
+        self.set_context()
 
+    def set_pos(self, pos_start=None, pos_end=None):
+        """
+        function to set pos_start and pos_end
+        """
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+        return self
+
+    def set_context(self, context = None):
+        """
+        function to set context
+        """
+        self.context = context
+        return self
 
     def added_to(self,other):
         """
@@ -1144,17 +928,15 @@ class Number(Value):
         """
         if isinstance(other,Number):#checks if the class Number and other are same.
             return Number(self.value + other.value).set_context(self.context), None
-        else:
-            return None, Value.illegal_operation(self, other)
 
     def subbed_by(self,other):
         """
         returns Number object, which is subtraction performed with self and the passed number object.
         """
-        if isinstance(other,Number):#checks if the class Number and other are same.
+        if isinstance(other,Number):#checks if the class Number and otherglobal_symbol_table = SymbolTable()
+global_symbol_table.set("null",Number(0))
+ are same.
             return Number(self.value - other.value).set_context(self.context), None
-        else:
-            return None, Value.illegal_operation(self, other)
 
     def multed_by(self,other):
         """
@@ -1162,8 +944,6 @@ class Number(Value):
         """
         if isinstance(other,Number):#checks if the class Number and other are same.
             return Number(self.value * other.value).set_context(self.context), None
-        else:
-            return None, Value.illegal_operation(self, other)
 
     def dived_by(self,other):
         """
@@ -1175,8 +955,6 @@ class Number(Value):
                 return None, RTError(other.pos_start,other.pos_end,"Division by zero",self.context)
 
             return Number(self.value / other.value).set_context(self.context), None
-        else:
-            return None, Value.illegal_operation(self, other)
 
     def powed_by(self, other):
         """
@@ -1185,58 +963,44 @@ class Number(Value):
         """
         if isinstance(other, Number):
             return Number(self.value ** other.value).set_context(self.context), None
-        else:
-            return None, Value.illegal_operation(self, other)
 
     def get_comparison_eq(self, other):
         if isinstance(other, Number):
             return Number(int(self.value == other.value)).set_context(self.context), None
-        else:
-            return None, Value.illegal_operation(self, other)
 
     def get_comparison_ne(self, other):
         if isinstance(other, Number):
             return Number(int(self.value != other.value)).set_context(self.context), None
-        else:
-            return None, Value.illegal_operation(self, other)
 
     def get_comparison_lt(self, other):
         if isinstance(other, Number):
             return Number(int(self.value < other.value)).set_context(self.context), None
-        else:
-            return None, Value.illegal_operation(self, other)
 
     def get_comparison_gt(self, other):
         if isinstance(other, Number):
-            return Number(int(self.value > other.value)).set_context(self.context), None
-        else:
-            return None, Value.illegal_operation(self, other)
+            return Number(int(self.value > other.value)).set_context(selfglobal_symbol_table = SymbolTable()
+global_symbol_table.set("null",Number(0))
+.context), None
 
     def get_comparison_lte(self, other):
         if isinstance(other, Number):
             return Number(int(self.value <= other.value)).set_context(self.context), None
-        else:
-            return None, Value.illegal_operation(self, other)
 
     def get_comparison_gte(self, other):
         if isinstance(other, Number):
             return Number(int(self.value >= other.value)).set_context(self.context), None
-        else:
-            return None, Value.illegal_operation(self, other)
 
     def anded_by(self, other):
         if isinstance(other, Number):
             return Number(int(self.value and other.value)).set_context(self.context), None
-        else:
-            return None, Value.illegal_operation(self, other)
 
     def ored_by(self, other):
         if isinstance(other, Number):
             return Number(int(self.value or other.value)).set_context(self.context), None
-        else:
-            return None, Value.illegal_operation(self, other)
 
-    def notted(self):
+    def notted(self):global_symbol_table = SymbolTable()
+global_symbol_table.set("null",Number(0))
+
         return Number(1 if self.value == 0 else 0).set_context(self.context), None
 
     def copy(self):
@@ -1248,53 +1012,8 @@ class Number(Value):
     def is_true(self):
         return self.value != 0
 
-
-
     def __repr__(self):
         return str(self.value)
-
-class Function(Value):
-    """
-    Needs documentation.
-
-    """
-
-    def __init__(self, name, body_node, arg_names):
-        super.__init__()
-        self.name = name or "<anonymous>"
-        self.body_node = body_node
-        self.arg_names = arg_names
-
-    def execute(self, args):
-        res = RTResult()
-        interpreter = Interpreter()
-        new_context = Context(self.name, self.context, self.pos_start)
-        new_context.symbol_table = SymbolTable(new_context.parent.symbol_table)
-
-        if len(args) > len(self.arg_names):
-            return res.failure(RTError(self.pos_end, "{} too few args passed into '{}'".format(len(self.arg_names) - len(args), self.name), self.context))
-
-        for i in range(len(args)):
-            arg_name = self.arg_names[i]
-            arg_value = args[i]
-            arg_value.set_context(new_context)
-            new_context.symbol_table.set(arg_name, arg_value)
-
-        value = res.register(interpreter.visit(self.body_node, new_context))
-        if res.error:
-            return res
-
-        return res.success(value)
-
-    def copy(self):
-        copy = Function(self.name, self.body_node, self.arg_names)
-        copy.set_context(self.context)
-        copy.set_pos(self.pos_start, self.pos_end)
-        return copy
-
-    def __repr__(self):
-        return "<function {}>".format(self.name)
-
 
 
 
@@ -1520,51 +1239,8 @@ class Interpreter:
                 return res
         return res.success(None)
 
-        def visit_FuncDefNode(self, node, context):
-            """
-            Needs documentation.
-            """
-
-            res = RTResult()
-
-            func_name = node.var_name_tok.value if node.var_name_tok else None
-            body_node = node.body_node
-            arg_names = [arg_name.value for arg_name in node.arg_name_toks]
-            func_value = Function(func_name, body_node, arg_names).set_context(context).set_pos(node.pos_start, node.pos_end)
-
-            if node.var_name_tok:
-                context.symbol_table.set(func_name, func_value)
-
-            return res.success(func_value)
-
-        def visit_CallNode(self, node, context):
-            """
-            Needs documentation.
-            """
-            res = RTResult()
-            args = []
-
-            value_to_call = res.register(self.visit(node.node_to_call, context))
-            if res.error:
-                return res
-
-            value_to_call = value_to_call.copy().set_pos(node.pos_start, node.pos_end)
-
-            for arg_node in node.arg_nodes:
-                args.append(res.register(self.visit(arg_node,context)))
-                if res.error:
-                    return res
-
-            return_value = res.register(value_to_call.execute(args))
-            if res.error:
-                return res
-            return res.success(return_value)
-
-
 global_symbol_table = SymbolTable()
 global_symbol_table.set("null",Number(0))
-global_symbol_table.set("FALSE", Number(0))
-global_symbol_table.set("TRUE", NUMBER(1))
 
 def run(fn, text):
     lexer = Lexer(fn, text)
