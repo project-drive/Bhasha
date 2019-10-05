@@ -451,7 +451,7 @@ class WhileNode:
         self.pos_end = self.body_node.pos_end
 
 
-
+VarAssignNode
 
 ### Need to understand Parse Result.
 class ParseResult:#check what it does...
@@ -520,14 +520,16 @@ class Parser:
     def if_expr(self):
         """
         JE - EXPR - TA - EXPR
-        (NAHITA - EXPR - TA - EXPR)* #wrapped in while.
-        DUJA - EXPR
+        (OHNAHI - EXPR - TA - EXPR)* #wrapped in while.
+        NAHITA - EXPR
 
         """
         res = ParseResult()
         cases = []
         else_case = None
-
+        """
+        Checks for if (JE)
+        """
         if not self.current_tok.matches(TT_KEYWORD, 'JE'):
             return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end,"Expected JE"))
 
@@ -537,45 +539,68 @@ class Parser:
         condition = res.register(self.expr())
         if res.error:
             return res
-
+        """
+        Checks for then(TA)
+        """
         if not self.current_tok.matches(TT_KEYWORD,'TA'):
             return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected TA"))
 
         res.register_advancement()
         self.advance()
 
+        """
+        Checks for the expression
+        """
+
         expr = res.register(self.expr())
         if res.error:
             return res
         cases.append((condition, expr))
 
-        while self.current_tok.matches(TT_KEYWORD, "NAHITA"):
+        """
+        Checks for mulitple elif (OHNAHI)
+        """
+        while self.current_tok.matches(TT_KEYWORD, "OHNAHI"):
             res.register_advancement()
             self.advance()
 
             condition = res.register(self.expr())
             if res.error:
                 return res
-
+            """
+            Checks for then (TA)
+            """
             if not self.current_tok.matches(TT_KEYWORD, "TA"):
                 return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected TA"))
 
             res.register_advancement()
             self.advance()
+
             expr = res.register(self.expr())
             if res.error:
                 return res
             cases.append((condition, expr))
 
-        if self.current_tok.matches(TT_KEYWORD,'DUJA'):
+            """
+            Checks for else (NAHITA)
+            """
+
+        if self.current_tok.matches(TT_KEYWORD,'NAHITA'):
             res.register_advancement()
             self.advance()
 
+            """
+            Checks for the expression
+            """
             else_case = res.register(self.expr())
             if res.error:
                 return res
 
         return res.success(IfNode(cases, else_case))
+
+        """
+        FOR
+        """
 
     def for_expr(self):
         res = ParseResult()
@@ -659,7 +684,7 @@ class Parser:
 
         body = res.register(self.expr())
         if res.error:
-            return res
+            return resTodo
 
         return res.success(WhileNode(condition, body))
 
@@ -696,6 +721,7 @@ class Parser:
                 return res.success(expr)
             else:
                 return res.failure(InvalidSyntaxError(self.current_tok.pos_start,self.current_tok.pos_end,"Expected ')'"))
+
         elif tok.matches(TT_KEYWORD, 'JE'):
             #IF statement handling.
             if_expr = res.register(self.if_expr())
@@ -806,12 +832,12 @@ class Parser:
 
             res.register_advancement()
             self.advance()
+
+
             expr = res.register(self.expr())
             if res.error:
                 return res
-            else:
-                #passing variable name and value of the evaluated expr.
-                return res.success(VarAssignNode(var_name, expr()))
+            return res.success(VarAssignNode(var_name, expr))
 
         node = res.register(self.bin_op(self.comp_expr, ((TT_KEYWORD , "ATE"), (TT_KEYWORD , "YA"))))
 
@@ -1148,22 +1174,34 @@ class Interpreter:
     def visit_IfNode(self, node, context):
         res = RTResult()
 
+        """
+        Checks all the conditions in cases
+        """
         for condition, expr in node.cases:
+
             condition_value = res.register(self.visit(condition, context))
             if res.error:
                 return res
+            """
+            If the condition is true it will execute the experission
+            """
             if condition_value.is_true():
                 expr_value = res.register(self.visit(expr, context))
                 if res.error:
                     return res
                 return res.success(expr_value)
 
+        """
+        Checks for an else and then executes the expr
+        """
         if node.else_case:
             else_value = res.register(self.visit(node.else_case, context))
             if res.error:
                 return res
             return res.success(else_value)
-
+        """
+        If there is no else then it will return None
+        """
         return res.success(None)
 
 

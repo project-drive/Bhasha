@@ -5,4 +5,4 @@ while True:
 		result, error = pun_bh.run('<stdin>', text)
 
 		if error: print(error.as_string())
-		else: print(result)
+		elif result: print(result)
