@@ -1,11 +1,14 @@
-for - mate
-while - jya sudhi
-if - jo
-else - naito
-void - khali
-input - levu
-output - Devu
-return - pacha
-break - todvu
-continue - chalu
-do - kar
+for - MATE
+while - JYA_SUDHI
+
+if - JO
+else - NITO
+else if - NITO_JO
+
+void - KHALI
+input - LEVU
+output - DEVU
+
+return - PACHA
+break - TODVU
+continue - CHALU
