@@ -20,3 +20,8 @@ atom 				: INT|FLOAT
 if-expr 		: KEYWORD:AGAR expr KEYWORD:TOH expr
 						  (KEYWORD:NAHITOH expr KEYWORD:TOH expr)*
 						  (KEYWORD:MAGAR expr)?
+
+for-exr 		: KEYWORD: FOR IDENTIFIER EQ expr KEYWORD: TO exp
+							(KEYWORD: STEP expr)? KEYWORD: THEN EXPR
+
+while-expr	: KEYWORD: WHILE: expr KEYWORD: THEN expr

@@ -128,8 +128,8 @@ KEYWORDS = [
     'TA', #then
     'OHNAHI', #ELIF
     'NAHITA', #else
-    'LAI', #FOR
-    'ISTAK', #TO
+    'JADO', #FOR
+    'TO', #TO
     'KADAM', #STEP
     'JADOTAI' #WHILE
 ]
@@ -451,7 +451,8 @@ class WhileNode:
         self.pos_end = self.body_node.pos_end
 
 
-VarAssignNode
+
+
 
 ### Need to understand Parse Result.
 class ParseResult:#check what it does...
@@ -605,12 +606,19 @@ class Parser:
     def for_expr(self):
         res = ParseResult()
 
-        if not self.current_tok.matches(TT_KEYWORD, 'LAI'):
-            return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end,"Expected LAI"))
+        """
+        This will search for a FOR KEYWORD and will return an error if it is not found
+        If FOR KEYWORD is found then it will advance
+        """
+        if not self.current_tok.matches(TT_KEYWORD, 'JADO'):
+            return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end,"Expected JADO"))
 
         res.register_advancement()
         self.advance()
-
+        """
+        This will look for an identifier for the variable name
+        if we find one it will assign it tp var_name and it advances
+        """
         if self.current_tok.type != TT_IDENTIFIER:
             return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected Identifier"))
 
@@ -618,27 +626,45 @@ class Parser:
         res.register_advancement()
         self.advance()
 
+        """
+        This will look for an = and then advance and will give an error if not found
+        """
         if self.current_tok.type != TT_EQ:
             return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected '='"))
 
         res.register_advancement()
         self.advance()
 
+        """
+        This takes the starting value expression and it assigns it to start_value
+        """
         start_value = res.register(self.expr())
         if res.error:
             return res
 
-        if not self.current_tok.matches(TT_KEYWORD,'ISTAK'):
-            return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected ISTAK"))
+        """
+        This will search for a TO KEYWORD and will return an error if it is not found
+        If TO KEYWORD is found then it will advance
+        """
+        if not self.current_tok.matches(TT_KEYWORD, 'TO'):
+            return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end,"Expected TO"))
 
         res.register_advancement()
         self.advance()
 
+        """
+        This will check for the end value and store it in end_value
+        """
         end_value = res.register(self.expr())
-
         if res.error:
             return res
 
+        """
+        We will optionally have a step followed by an expr
+        This will check for a STEP KEYWORD
+        if it is found it will advance and we will get the step value which is just another expression and that is stored in step_value
+        if there is no step keyword the step_value is set to none
+        """
         if self.current_tok.matches(TT_KEYWORD,'KADAM'):
             res.register_advancement()
             self.advance()
@@ -649,43 +675,74 @@ class Parser:
         else:
             step_value = None
 
+        """
+        After that we again check for a THEN KEYWORD and advance
+        """
         if not self.current_tok.matches(TT_KEYWORD, 'TA'):
             return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected 'TA'"))
 
         res.register_advancement()
         self.advance()
 
+        """
+        Here we take another expr for the body and store it in body
+        """
+
         body = res.register(self.expr())
         if res.error:
             return res
 
+        """
+        At the end of this method we will return a ForNode and these variables.
+        """
         return res.success(ForNode(var_name, start_value, end_value, step_value, body))
+
+
 
 
     def while_expr(self):
         res = ParseResult()
 
+        """
+        This will check for the WHILE KEYWORD
+        if it is found it will advance
+        if it is not found it will give an error
+        """
         if not self.current_tok.matches(TT_KEYWORD, 'JADOTAI'):
             return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected JADOTAI"))
 
         res.register_advancement()
         self.advance()
 
+        """
+        This will take the condtion expr and store it in condition
+        """
         condition = res.register(self.expr())
-
         if res.error:
             return res
 
+        """
+        This will check for the THEN KEYWORD
+        if found it will advance
+        if not found it will give an error
+        """
         if not self.current_tok.matches(TT_KEYWORD, 'TA'):
             return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected TA"))
 
         res.register_advancement()
         self.advance()
 
+        """
+        This will take the body and store it in body
+        """
+
         body = res.register(self.expr())
         if res.error:
-            return resTodo
+            return res
 
+        """
+        At the end of this method we will return a WhileNode with the condition and body as its parameters.
+        """
         return res.success(WhileNode(condition, body))
 
 
@@ -728,14 +785,14 @@ class Parser:
             if res.error: return res
             return res.success(if_expr)
 
-        elif tok.matches(TT_KEYWORD, 'LAI'):
-            #IF statement handling.
+        elif tok.matches(TT_KEYWORD, 'JADO'):
+            #FOR statement handling.
             for_expr = res.register(self.for_expr())
             if res.error: return res
             return res.success(for_expr)
 
         elif tok.matches(TT_KEYWORD, 'JADOTAI'):
-            #IF statement handling.
+            #WHILE statement handling.
             while_expr = res.register(self.while_expr())
             if res.error: return res
             return res.success(while_expr)
@@ -803,7 +860,7 @@ class Parser:
 
         if res.error:
             return res.failure(InvalidSyntaxError(
-                tok.pos_start, tok.pos_end, "Expected int, float, identifier, '+', '-', '(', or NAHI"
+                self.current_tok.pos_start, self.current_tok.pos_end, "Expected int, float, identifier, '+', '-', '(', or NAHI"
             ))
 
         return res.success(node)
@@ -1098,7 +1155,7 @@ class Interpreter:
         value = context.symbol_table.get(var_name)
 
         if not value:
-            return res.failure(RTError(node.pos_start,node.pos_end,"'{}' is not defined".format(var_name)), context)
+            return res.failure(RTError(node.pos_start,node.pos_end,"'{}' is not defined".format(var_name), context))
 
         value = value.copy().set_pos(node.pos_start, node.pos_end)
         return res.success(value)
@@ -1208,14 +1265,25 @@ class Interpreter:
     def visit_ForNode(self, node, context):
         res = RTResult()
 
+        """
+        This will visit the start_value_node and store it too start_value
+        """
         start_value = res.register(self.visit(node.start_value_node, context))
         if res.error:
             return res
 
+        """
+        This will visit the end_value_node and store it to end_value
+        """
         end_value = res.register(self.visit(node.end_value_node, context))
         if res.error:
             return res
 
+        """
+        This will visit the step_value_node and store it in step_value
+        if the step_value_node node is not found it will set the value of step_value to 1
+        1 is the default value of step_value
+        """
         if node.step_value_node:
             step_value = res.register(self.visit(node.end_value_node,context))
             if res.error:
@@ -1223,13 +1291,26 @@ class Interpreter:
         else:
             step_value = Number(1)
 
+        """
+        i stores the start_value
+        """
         i = start_value.value
-
+        """
+        step_value can be positive or negative
+        if it is positive it should be < end_value
+        if it is negavive it should be > than end_value
+        """
         if step_value.value >= 0:
             condition = lambda: i < end_value.value
         else:
             condition = lambda: i > end_value.value
 
+        """
+        this loop runs until condition has a value
+        at each itteration the variable name value is assigned to i so that we can access it form within the loop
+        value of i is incremented by step value
+        body_node is evaluated by visiting it
+        """
         while condition():
             context.symbol_table.set(node.var_name_tok.value, Number(i))
             i+= step_value.value
@@ -1238,22 +1319,40 @@ class Interpreter:
             if res.error:
                 return res
 
+        """
+        Currenty we are returning none
+        # TODO: change this to lists
+        """
         return res.success(None)
+
+
 
     def visit_WhileNode(self, node, context):
         res = RTResult()
+        """
+        We have an infinte loop and at each iteration we evaluate the condition_node
 
+        """
         while True:
             condition = res.register(self.visit(node.condition_node, context))
             if res.error:
                 return res
-
+            """
+            if the condition is not true we will break out of this loop
+            """
             if not condition.is_true():
                 break
-
+            """
+            It will evaluate the body_node until the contion is true
+            """
             res.register(self.visit(node.body_node, context))
             if res.error:
                 return res
+
+        """
+        we return none currently
+        # TODO: chagne this to lists
+        """
         return res.success(None)
 
 global_symbol_table = SymbolTable()
