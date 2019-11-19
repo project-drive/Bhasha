@@ -117,6 +117,8 @@ TT_LT           = 'LT'
 TT_GT           = 'GT'
 TT_LTE          = 'LTE'
 TT_GTE          = 'GTE'
+TT_COMMA        = 'COMMA'
+TT_ARROW        = 'ARROW'
 TT_EOF		    = 'EOF'
 
 KEYWORDS = [
@@ -131,7 +133,8 @@ KEYWORDS = [
     'JADO', #FOR
     'TO', #TO
     'KADAM', #STEP
-    'JADOTAI' #WHILE
+    'JADOTAI', #WHILE
+    'FUN' #Funtion
 ]
 
 class Token: #used to create a token, value pair. storing position start and position end of the token.
@@ -216,8 +219,7 @@ class Lexer:
                 tokens.append(Token(TT_PLUS, pos_start= self.pos))
                 self.advance()
             elif self.current_char == '-':
-                tokens.append(Token(TT_MINUS, pos_start= self.pos))
-                self.advance()
+                tokens.append(self.make_minus_or_arrow())
             elif self.current_char == '*':
                 tokens.append(Token(TT_MUL, pos_start= self.pos))
                 self.advance()
@@ -232,6 +234,9 @@ class Lexer:
                 self.advance()
             elif self.current_char == ')':
                 tokens.append(Token(TT_RPAREN, pos_start= self.pos))
+                self.advance()
+            elif self.current_char == ',':
+                tokens.append(Token(TT_COMMA, pos_start= self.pos))
                 self.advance()
             elif self.current_char == '!':
                 tok, error = self.make_not_equals() #special handling function for NE.
@@ -288,6 +293,17 @@ class Lexer:
 
         tok_type = TT_KEYWORD if id_str in KEYWORDS else TT_IDENTIFIER
         return Token(tok_type, id_str, pos_start, self.pos)
+
+
+    def make_minus_or_arrow(self):
+        tok_type = TT_MINUS
+        pos_start = self.pos.copy()
+        self.advance()
+
+        if self.current_char == '>':
+            self.advance()
+            tok_type = TT_ARROW
+        return Token(tok_type, pos_start = pos_start, pos_end = self.pos)
 
     def make_not_equals(self):
         """
@@ -449,6 +465,39 @@ class WhileNode:
 
         self.pos_start = self.condition_node.pos_start
         self.pos_end = self.body_node.pos_end
+
+class FunDefNode:
+    """
+     to define the funciton
+    """
+    def __init__(self, var_name_tok, arg_name_toks, body_node):
+        self.var_name_tok = var_name_tok
+        self.arg_name_toks = arg_name_toks
+        self.body_node = body_node
+
+        if self.var_name_tok:
+            self.pos_start = self.var_name_tok.pos_start
+        elif len(self.arg_name_toks) > 0:
+            self.pos_start = self.arg_name_toks[0].pos_start
+        else:
+            self.pos_start = self.body_node.pos_start
+
+        self.pos_end = self.body_node.pos_end
+
+class CallNode:
+    """
+    for calling a function
+    """
+    def __init__(self, node_to_call, arg_nodes):
+        self.node_to_call = node_to_call
+        self.arg_nodes = arg_nodes
+
+        self.pos_start = self.node_to_call.pos_start
+
+        if len(self.arg_nodes) > 0:
+            self.pos_end = arg_nodes[len(self.arg_nodes) -1].pos_end
+        else:
+            self.pos_end = self.node_to_call.pos_end
 
 
 
@@ -746,6 +795,63 @@ class Parser:
         return res.success(WhileNode(condition, body))
 
 
+    def func_def(self):
+        """
+        First checks for syntax error
+        """
+        res =  ParseResult()
+        if not self.current_tok.matches(TT_KEYWORD, 'FUN'):
+            return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected FUN"))
+
+        res.register_advancement()
+        self.advance()
+
+        if self.current_tok.type = TT_IDENTIFIER:
+                var_name_tok = self.current_tok
+                res.register_advancement()
+                self.advance()
+                if self.current_tok.type != TT_LPAREN:
+                    res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected '('"))
+
+        res.register_advancement()
+        self.advance()
+        arg_name_toks = []
+
+        if self.current_tok.type == TT_IDENTIFIER:
+            arg_name_toks.append(self.current_tok)
+            res.register_advancement()
+            self.advance()
+
+            while self.current_tok.type == TT_COMMA:
+                res.register_advancement()
+                self.advance()
+                if self.current_tok.type != TT_IDENTIFIER:
+                    res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected identifier"))
+
+                arg_name_toks.append(self.current_tok)
+                res.register_advancement()
+                self.advance()
+
+                if self.current_tok.type != TT_RPAREN:
+                    res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected ',' or ')'"))
+
+        else:
+            if self.current_tok.type != TT_RPAREN:
+                res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected ')'"))
+
+            res.register_advancement()
+            self.advance()
+
+            if self.current_tok.type != TT_ARROW:
+                res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected '->'"))
+
+            res.register_advancement()
+            self.advance()
+            node_to_return = res.register(self.expr())
+            if res.error: return res
+
+            return res.success(FuncDefNode(var_name_tok, arg_name_toks, node_to_return))
+
 
 
     def atom(self):
@@ -797,13 +903,56 @@ class Parser:
             if res.error: return res
             return res.success(while_expr)
 
+        elif tok.matches(TT_KEYWORD, 'FUN'):
+            #WHILE statement handling.
+            func_def = res.register(self.func_def())
+            if res.error: return res
+            return res.success(func_def)
+
         return res.failure(InvalidSyntaxError(tok.pos_start, tok.pos_end,"Expected int, float, identifier, '+', '-', '(', "))
 
     def power(self):
         """
         power : atom (pow factor)*
         """
-        return self.bin_op(self.atom, (TT_POW, ), self.factor)
+        return self.bin_op(self.call, (TT_POW, ), self.factor)
+
+
+    def call(self):
+        res = ParseResult()
+        atom = res.register(self.atom())
+        if res.error: return res
+
+
+        if self.current_tok.type == TT_LPAREN:
+            res.register_advancement()
+            self.advance()
+            arg_nodes = []
+
+            if self.current_tok.type == TT_RPAREN:
+                res.register_advancement()
+                self.advance()
+            else:
+                arg_nodes.append(res.register(self.expr()))
+                if res.error:
+                    return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected ')', 'JE', 'JADO', 'JADOTAI',  int, float, 'DABBA',  identifier, '+', '-', or '('"))
+
+                while self.current_tok.type == TT_COMMA:
+                    res.register_advancement()
+                    self.advance()
+
+                    arg_nodes.append(res.register(self.expr()))
+                    if res.error: return res
+
+                if self.current_tok.type != TT_RPAREN:
+                    res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected ',' or ')'"))
+
+                res.register_advancement()
+                self.advance()
+
+            return res.success(CallNode(atom, arg_nodes))
+        return res.success(atom)
+
 
     def factor(self):
         """
@@ -901,6 +1050,10 @@ class Parser:
         if res.error:
             return res.failure(InvalidSyntaxError(self.current_tok.pos_start, self.current_tok.pos_end, "Expected int, float,DABBA, identifier, '+', '-', or '('"))
         return res.success(node)
+
+
+
+
 
     def bin_op(self,func_a,ops,func_b=None):#generalised function for term and expr.
         """
