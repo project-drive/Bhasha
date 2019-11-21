@@ -1100,7 +1100,83 @@ class RTResult:
         return self
 
 
-class Number:
+###
+#Value
+###
+
+class Value:
+    def __init__(self):
+        self.set_pos()
+        self.set_context()
+
+
+    def set_pos(self, pos_start = None, pos_end = None):
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+        return self
+
+    def set_context(self, context = None):
+        self.context = context
+        return self
+
+    def added_to(self, other):
+        return None, self.illegal_operation(other)
+
+    def subbed_by(self, other):
+        return None, self.illegal_operation(other)
+
+    def multed_by(self, other):
+        return None, self.illegal_operation(other)
+
+    def dived_by(self, other):
+        return None, self.illegal_operation(other)
+
+    def powed_by(self, other):
+        return None, self.illegal_operation(other)
+
+    def get_comparison_eq(self, other):
+        return None, self.illegal_operation(other)
+
+    def get_comparison_lt(self, other):
+        return None, self.illegal_operation(other)
+
+    def get_comparison_ne(self, other):
+        return None, self.illegal_operation(other)
+
+    def get_comparison_gt(self, other):
+        return None, self.illegal_operation(other)
+
+    def get_comparison_gte(self, other):
+        return None, self.illegal_operation(other)
+
+    def get_comparison_lte(self, other):
+        return None, self.illegal_operation(other)
+
+    def anded_by(self, other):
+        return None, self.illegal_operation(other)
+
+    def notted(self, other):
+        return None, self.illegal_operation(other)
+
+    def ored_by(self, other):
+        return None, self.illegal_operation(other)
+
+    def execute(self, args):
+        return None, sefl.illegal_operation()
+
+    def copy(self):
+        raise Exception('No copy method defined')
+
+    def is_true(self):
+        return False
+
+    def illegal_operation(self, other = None):
+        if not other: other = self
+        return RTError(self.pos_start, other.pos_end, 'Illegal Operation', self.context)
+
+
+
+class Number(Value):
     """
     Methods defined:
     1. set_pos : params - start, end. Used to set position start and end
@@ -1123,25 +1199,24 @@ class Number:
 
     """
 
-    def __init__(self, arg):
-        self.value = arg
-        self.set_pos()
-        self.set_context()
+    def __init__(self, value):
+        super().__init__()
+        self.value = value
 
-    def set_pos(self, pos_start=None, pos_end=None):
-        """
-        function to set pos_start and pos_end
-        """
-        self.pos_start = pos_start
-        self.pos_end = pos_end
-        return self
-
-    def set_context(self, context = None):
-        """
-        function to set context
-        """
-        self.context = context
-        return self
+    # def set_pos(self, pos_start=None, pos_end=None):
+    #     """
+    #     function to set pos_start and pos_end
+    #     """
+    #     self.pos_start = pos_start
+    #     self.pos_end = pos_end
+    #     return self
+    #
+    # def set_context(self, context = None):
+    #     """
+    #     function to set context
+    #     """
+    #     self.context = context
+    #     return self
 
     def added_to(self,other):
         """
@@ -1149,6 +1224,8 @@ class Number:
         """
         if isinstance(other,Number):#checks if the class Number and other are same.
             return Number(self.value + other.value).set_context(self.context), None
+        else:
+            return None, Value.illegal_operation(self.pos_start, other.pos_end)
 
     def subbed_by(self,other):
         """
@@ -1156,6 +1233,8 @@ class Number:
         """
         if isinstance(other,Number):#checks if the class Number and other are same.
             return Number(self.value - other.value).set_context(self.context), None
+        else:
+            return None, Value.illegal_operation(self.pos_start, other.pos_end)
 
     def multed_by(self,other):
         """
@@ -1163,6 +1242,8 @@ class Number:
         """
         if isinstance(other,Number):#checks if the class Number and other are same.
             return Number(self.value * other.value).set_context(self.context), None
+        else:
+            return None, Value.illegal_operation(self.pos_start, other.pos_end)
 
     def dived_by(self,other):
         """
@@ -1173,7 +1254,11 @@ class Number:
             if other.value == 0:
                 return None, RTError(other.pos_start,other.pos_end,"Division by zero",self.context)
 
+
             return Number(self.value / other.value).set_context(self.context), None
+
+        else:
+            return None, Value.illegal_operation(self.pos_start, other.pos_end)
 
     def powed_by(self, other):
         """
@@ -1182,41 +1267,60 @@ class Number:
         """
         if isinstance(other, Number):
             return Number(self.value ** other.value).set_context(self.context), None
+        else:
+            return None, Value.illegal_operation(self.pos_start, other.pos_end)
 
     def get_comparison_eq(self, other):
         if isinstance(other, Number):
             return Number(int(self.value == other.value)).set_context(self.context), None
+        else:
+            return None, Value.illegal_operation(self.pos_start, other.pos_end)
 
     def get_comparison_ne(self, other):
         if isinstance(other, Number):
             return Number(int(self.value != other.value)).set_context(self.context), None
+        else:
+            return None, Value.illegal_operation(self.pos_start, other.pos_end)
 
     def get_comparison_lt(self, other):
         if isinstance(other, Number):
             return Number(int(self.value < other.value)).set_context(self.context), None
+        else:
+            return None, Value.illegal_operation(self.pos_start, other.pos_end)
 
     def get_comparison_gt(self, other):
         if isinstance(other, Number):
             return Number(int(self.value > other.value)).set_context(self.context), None
+        else:
+            return None, Value.illegal_operation(self.pos_start, other.pos_end)
 
     def get_comparison_lte(self, other):
         if isinstance(other, Number):
             return Number(int(self.value <= other.value)).set_context(self.context), None
+        else:
+            return None, Value.illegal_operation(self.pos_start, other.pos_end)
 
     def get_comparison_gte(self, other):
         if isinstance(other, Number):
             return Number(int(self.value >= other.value)).set_context(self.context), None
+        else:
+            return None, Value.illegal_operation(self.pos_start, other.pos_end)
 
     def anded_by(self, other):
         if isinstance(other, Number):
             return Number(int(self.value and other.value)).set_context(self.context), None
+        else:
+            return None, Value.illegal_operation(self.pos_start, other.pos_end)
 
     def ored_by(self, other):
         if isinstance(other, Number):
             return Number(int(self.value or other.value)).set_context(self.context), None
+        else:
+            return None, Value.illegal_operation(self.pos_start, other.pos_end)
 
     def notted(self):
         return Number(1 if self.value == 0 else 0).set_context(self.context), None
+
 
     def copy(self):
         copy = Number(self.value)
@@ -1231,8 +1335,25 @@ class Number:
         return str(self.value)
 
 
+###
+#Function
+###
+class Function(value):
+    def __init__(self, name, body_node, arg_names):
+        super().__init__()
+        self.name = name or "<anonyomus>"
+        self.body_node = body_node
+        self.arg_names = arg_names
 
+    def execute(self, args):
+        res = RTResult()
+        interpreter = Interpreter()
+        new_context = Context(self.name, self.context, self.pos_start)
+        new_context.symbol_table = SymbolTable(new_context.parent.symbol_table)        
 
+###
+#Context
+###
 class Context:
     """A class for keeping track of context. takes in display_name, parent context, parent_entry_pos."""
 
