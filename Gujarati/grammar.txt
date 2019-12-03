@@ -1,0 +1,39 @@
+expr				: KEYWORD:JAGYA IDENTIFIER EQ expr
+						: comp-expr ((KEYWORD:ANE|KEYWORD:ATHAVA) comp-expr)*
+
+comp-expr		: LATUM comp-expr
+						: arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
+
+arith-expr	:	term ((PLUS|MINUS) term)*
+
+term				: factor ((MUL|DIV) factor)*
+
+factor			: (PLUS|MINUS) factor
+						: power
+
+power				: call (POW factor)*
+
+call				: atom (LPAREN (expr (COMMA expr)*)? RPAREN)?
+
+atom 				: INT|FLOAT|STRING|IDENTIFIER
+						: LPAREN expr RPAREN
+						: list-expr
+						: if-expr
+						: for-expr
+						: while-expr
+						: func-def
+
+list-expr		: LSQUARE (expr (COMMA expr)*)? RSQUARE
+
+if-expr			: KEYWORD:JO expr KEYWORD:PACHI expr
+							(KEYWORD:NITO_JO expr KEYWORD:PACHI expr)*
+							(KEYWORD:NITO expr)?
+
+for-expr		: KEYWORD:MATE IDENTIFIER EQ expr KEYWORD:THI expr
+							(KEYWORD:PAGALUM expr)? KEYWORD:PACHI expr
+
+while-expr	: KEYWORD:JYA_SUDHI expr KEYWORD:PACHI expr
+
+func-def		: KEYWORD:FUN IDENTIFIER?
+							LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
+							ARROW expr
